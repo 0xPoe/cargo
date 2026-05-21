@@ -1,0 +1,6 @@
+[workspace]
+members = ["primary", "dependency"]
+resolver = "3"
+
+[workspace.dependencies]
+foo = { version = "0.0.0", path = "./dependency"}
