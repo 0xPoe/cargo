@@ -1555,7 +1555,9 @@ fn warn_inherit_def_feat_true_member_def_feat_false() {
 }
 
 #[cargo_test]
-fn warn_inherit_def_feat_true_member_def_feat_false_2024_edition() {
+fn inherit_def_feat_true_member_def_feat_false_2024_edition() {
+    // RFC 3945: on Edition 2024+, the member's `default-features = false`
+    // overrides the workspace's `default-features = true`.
     Package::new("dep", "0.1.0")
         .feature("default", &["fancy_dep"])
         .add_dep(Dependency::new("fancy_dep", "0.2").optional(true))
@@ -1586,17 +1588,19 @@ fn warn_inherit_def_feat_true_member_def_feat_false_2024_edition() {
         .build();
 
     p.cargo("check")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
+[CHECKING] dep v0.1.0
+[CHECKING] bar v0.2.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[LOCKING] 1 package to latest Rust [..] compatible version
 
-Caused by:
-  error inheriting `dep` from workspace root manifest's `workspace.dependencies.dep`
-
-Caused by:
-  `default-features = false` cannot override workspace's `default-features`
-
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -1648,7 +1652,10 @@ fn warn_inherit_simple_member_def_feat_false() {
 }
 
 #[cargo_test]
-fn warn_inherit_simple_member_def_feat_false_2024_edition() {
+fn inherit_simple_member_def_feat_false_2024_edition() {
+    // RFC 3945: on Edition 2024+, the member's `default-features = false`
+    // takes effect even when the workspace dependency doesn't specify
+    // `default-features` (simple string form).
     Package::new("dep", "0.1.0")
         .feature("default", &["fancy_dep"])
         .add_dep(Dependency::new("fancy_dep", "0.2").optional(true))
@@ -1679,17 +1686,19 @@ fn warn_inherit_simple_member_def_feat_false_2024_edition() {
         .build();
 
     p.cargo("check")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
+[CHECKING] dep v0.1.0
+[CHECKING] bar v0.2.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[LOCKING] 1 package to latest Rust [..] compatible version
 
-Caused by:
-  error inheriting `dep` from workspace root manifest's `workspace.dependencies.dep`
-
-Caused by:
-  `default-features = false` cannot override workspace's `default-features`
-
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -1736,6 +1745,58 @@ fn inherit_def_feat_false_member_def_feat_true() {
 [CHECKING] dep v0.1.0
 [CHECKING] bar v0.2.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+#[cargo_test]
+fn inherit_def_feat_false_member_def_feat_true_2024_edition() {
+    // RFC 3945: on Edition 2024+, the member's `default-features = true`
+    // overrides the workspace's `default-features = false`.
+    Package::new("dep", "0.1.0")
+        .feature("default", &["fancy_dep"])
+        .add_dep(Dependency::new("fancy_dep", "0.2").optional(true))
+        .file("src/lib.rs", "")
+        .publish();
+
+    Package::new("fancy_dep", "0.2.4").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.2.0"
+            edition = "2024"
+            authors = []
+            [dependencies]
+            dep = { workspace = true, default-features = true }
+
+            [workspace]
+            members = []
+            [workspace.dependencies]
+            dep = { version = "0.1.0", default-features = false }
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
+[DOWNLOADED] fancy_dep v0.2.4 (registry `dummy-registry`)
+[CHECKING] fancy_dep v0.2.4
+[CHECKING] dep v0.1.0
+[CHECKING] bar v0.2.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[LOCKING] 2 packages to latest Rust [..] compatible versions
 
 "#]]
             .unordered(),
