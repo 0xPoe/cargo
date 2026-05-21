@@ -639,9 +639,12 @@ After that, add it to the `[dependencies]` table with `workspace = true`.
 Along with the `workspace` key, dependencies can also include these keys:
 - [`optional`][optional]: Note that the`[workspace.dependencies]` table is not allowed to specify `optional`.
 - [`features`][features]: These are additive with the features declared in the `[workspace.dependencies]`
+- `default-features` (Edition 2024+): Overrides the value set in `[workspace.dependencies]`.
+  If neither the package nor the workspace specifies `default-features`, it defaults to `true`.
+  In earlier editions, specifying `default-features` on an inherited dependency is an error.
 
-Other than `optional` and `features`, inherited dependencies cannot use any other
-dependency key (such as `version` or `default-features`).
+Other than `optional`, `features`, and `default-features`, inherited dependencies
+cannot use any other dependency key (such as `version`).
 
 Dependencies in the `[dependencies]`, `[dev-dependencies]`, `[build-dependencies]`, and
 `[target."...".dependencies]` sections support the ability to reference the
@@ -651,9 +654,11 @@ Dependencies in the `[dependencies]`, `[dev-dependencies]`, `[build-dependencies
 [package]
 name = "bar"
 version = "0.2.0"
+edition = "2024"
 
 [dependencies]
 regex = { workspace = true, features = ["unicode"] }
+serde = { workspace = true, default-features = false }
 
 [build-dependencies]
 cc.workspace = true

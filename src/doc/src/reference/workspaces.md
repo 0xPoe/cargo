@@ -199,6 +199,9 @@ inherited by members of a workspace.
 Specifying a workspace dependency is similar to [package dependencies][specifying-dependencies] except:
 - Dependencies from this table cannot be declared as `optional`
 - [`features`][features] declared in this table are additive with the `features` from `[dependencies]`
+- `default-features` declared on a package dependency overrides the value set
+  here, starting in Edition 2024 (prior to Edition 2024, specifying
+  `default-features` on an inherited dependency is an error)
 
 You can then [inherit the workspace dependency as a package dependency][inheriting-a-dependency-from-a-workspace]
 
