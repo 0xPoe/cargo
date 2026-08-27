@@ -114,6 +114,8 @@ pub mod install;
 pub mod paths;
 pub mod publish;
 pub mod registry;
+#[cfg(windows)]
+pub mod windows;
 
 pub mod prelude {
     pub use crate::ArgLineCommandExt;
