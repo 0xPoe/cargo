@@ -1,0 +1,31 @@
+name: Reproduce cargo run carriage-return overwrite
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - repro-run-carriage-return
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  reproduce:
+    runs-on: windows-latest
+    env:
+      CARGO_INCREMENTAL: 0
+      CARGO_PROFILE_DEV_DEBUG: 1
+      CARGO_PROFILE_TEST_DEBUG: 1
+      RUSTUP_WINDOWS_PATH_ADD_BIN: 0
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - run: rustup update --no-self-update stable-msvc
+      - run: rustup default stable-msvc
+      - name: Reproduce overwrite in merged stdout and stderr
+        run: >-
+          cargo test -p cargo --test testsuite --
+          run::exit_code_with_carriage_return_overwrites_output --exact --nocapture

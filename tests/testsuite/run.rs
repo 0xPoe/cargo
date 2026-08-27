@@ -326,6 +326,59 @@ fn exit_code_verbose() {
 }
 
 #[cargo_test]
+#[cfg_attr(
+    not(windows),
+    ignore = "Cargo replaces itself with the binary on Unix and cannot print the exit error"
+)]
+fn exit_code_with_carriage_return_overwrites_output() {
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"
+use std::io::Write;
+
+fn main() {
+    print!("hello from the application\r");
+    std::io::stdout().flush().unwrap();
+    std::process::exit(1);
+}
+"#,
+        )
+        .build();
+
+    // A terminal displays stdout and stderr on the same screen. Capture them in one file so the
+    // test observes the ordering that causes the trailing carriage return to overwrite output.
+    let output_path = p.root().join("terminal-output");
+    let output_file = std::fs::File::create(&output_path).unwrap();
+    let mut cargo = p.cargo("run").build_command();
+    cargo
+        .stdout(output_file.try_clone().unwrap())
+        .stderr(output_file);
+    let status = cargo.status().unwrap();
+    drop(cargo);
+    assert_eq!(status.code(), Some(1));
+
+    let output = std::fs::read(output_path).unwrap();
+    let application_output = b"hello from the application\r";
+    let start = output
+        .windows(application_output.len())
+        .position(|window| window == application_output)
+        .expect("application output should be present");
+
+    // Cargo's error immediately follows the carriage return. A terminal moves its cursor to
+    // column zero for `\r`, so the error overwrites the application's output.
+    let overwritten_boundary =
+        "hello from the application\rerror: process didn't exit successfully";
+    let actual_boundary = output
+        .get(start..start + overwritten_boundary.len())
+        .expect("Cargo's error should follow the application output");
+    assert_eq!(
+        std::str::from_utf8(actual_boundary).unwrap(),
+        overwritten_boundary
+    );
+}
+
+#[cargo_test]
 fn no_main_file() {
     let p = project().file("src/lib.rs", "").build();
 
